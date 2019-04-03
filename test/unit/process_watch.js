@@ -8,11 +8,17 @@
 
  /* 
   * testPIDs
-  * a set of test PID objects
+  * a set of test PID objects, 
+  * 
+  ** will be modified for each test
+  ** to simulate changing process behavior
+  * 
   * 'high_usage_ps',
   *     Stays at 100% for full "5.5" hours
+  *     Should always be watched, and warned about
   * 'low_usage_ps',
   *     Always below 'cpuRemoveLevel' track option
+  *     Should never be watched, let alone warned about
   * 'mid_usage_ps',
   *     above cpuAddLevel for first tests
   *     for time test drops below 'cpuAddLevel' BUT NOT below 'cpuRemoveLevel'
@@ -91,11 +97,6 @@
 
  describe("process_watch: checkProcess", function () {
    // Test initial check Process functions:
-   /* it("Watch list initialized ", function () {
-     expect(process_watch.init(psLookup, pidusage), "should match").to
-       .equal(testPIDs);
-   }); */
-
    process_watch.init(psLookup, pidusage)
 
    describe("-> First Process Check ", function () {
@@ -161,14 +162,14 @@
          elapsed: 0,
          timestamp: fiveMinutesNewer
        }];
-       // Send the new 'aged' variable ? 
+       // Send the new variable  
        process_watch.init(psLookup, pidusage)
-       // Run check again
+       // Run check 
        process_watch.checkProcess();
        let watchList = process_watch.reportProcesses();
        expect(watchList, "Processes should be in watch list ").to
          .exist;
-       // Test logic when fed data
+
        expect(watchList[3],
          "Spiky_usage should still be tracked "
        ).to.exist;
@@ -182,10 +183,12 @@
          ).to
          .equal(
            'issues exist');
-       //expect().to.equal('');
      });
      it("Test logic when fed 20 minutes newer data ", function () {
        // Alter the process variables and 'age' them
+
+       // Needs to be 15 minutes after first warn, (5 + 15 = 20)
+       // as NEW warn item won't be reported until 15 min old
        let twentyMinutesNewer = ((new Date().getTime()) + (20 * 60 *
          1000));
        testPIDs = [{
@@ -247,7 +250,7 @@
          .include(
            'This process may be problematic');
 
-       // ~How often is reported
+       // How often is reported
        let reportTime = ((new Date().getTime()) + (25 * 60 *
          1000));
        expect(process_watch.reportHighUsageProcess(reportTime),
@@ -267,11 +270,14 @@
      it("Test logic when fed 4 hours newer data ", function () {
        // Alter the process variables  'age' them
 
+       // time needs to be 3 hours after last checkProcess
+       // to allow 'age out'
+       let time = ((new Date().getTime()) + (4 * 60 * 60 *
+         1000));
+
        //High usage stay
        //mid and decreasing should age out
        //decreasing should low-cpu drop out
-       let time = ((new Date().getTime()) + (4 * 60 * 60 *
-         1000));
        testPIDs = [{
          name: 'high_usage_ps',
          pid: 1,
@@ -311,7 +317,6 @@
        // Send the new 'aged' variables ? 
        process_watch.init(psLookup, pidusage)
        process_watch.checkProcess(time);
-       //process_watch.checkProcess();
        let watchList = process_watch.reportProcesses(time);
        expect(watchList, "Processes should be in watch list ").to
          .exist;
@@ -348,9 +353,9 @@
    describe("-> Unix Process Check ", function () {
      it("Test logic when fed unix stype data ", function () {
 
-       // want logic to pick up 
-       // high, spiky, and decreasing
+       // want logic to detect [high, spiky, and decreasing]
 
+       //time needs to be 90 min later than last report
        let time = ((new Date().getTime()) + (5.7 * 60 * 60 *
          1000));
        testPIDs = [{
@@ -395,8 +400,8 @@
        debugger;
        process_watch.checkProcess(time);
        process_watch.checkProcess(time);
-       //process_watch.checkProcess(time);
-       //process_watch.checkProcess();
+       // process_watch.checkProcess(time);
+       // process_watch.checkProcess();
        // high, spiky, and decreasing
        let watchList = process_watch.reportProcesses(time);
        expect(watchList, "Processes should be in watch list ").to
@@ -423,31 +428,6 @@
 
        expect(report, "should be reported").to.include(
          'high_usage_ps');
-
      });
-     // Test logic when fed data
-     /* 
-     it("", function () {
-       // ~~removed after x time?
-       // ~~removed after cpu below x usage?
-       expect(.to.equal(''));
-     });
-
-     it("", function () {
-       // Test data feed
-       // ~examine structure of pslookup and current-process
-       expect(.to.equal(''));
-     });
-
-     it("", function () {
-       // Test error handling 
-       // ~feed bad data
-       expect(.to.equal(''));
-     });
-     it("", function () {
-       // Test feed to bot manager 
-       // ~feed bad data
-       expect(.to.equal(''));
-     }); */
    });
  });
