@@ -4,9 +4,10 @@ const shell = require("shelljs");
 const async = require("async");
 const AB = require("ab-utils");
 //
+const process_watch = require(path.join(__dirname, "src", "process_watch.js"));
 const psLookup = require("current-processes");
-const _ = require("lodash");
 const pidusage = require('pidusage')
+const _ = require("lodash");
 
 // const SOCKETFILE = "1338";
 // const SOCKETFILE = "/tmp/ab.sock";
@@ -185,167 +186,9 @@ function writeToSlack(message) {
   }
 }
 
+//pass in ps and pid checker libraries, and the stream
+process_watch.init(psLookup, pidusage, currStream)
 
 // now setup our checkUsage() operation
-setInterval(checkProcess, 5 * 100);
-setInterval(reportHighUsageProcess, 30 * 60 * 1000); // 30 min
-
-
-
-//if above 80% go into history
-//if drop below 20% removed from processWatchList
-//if time inserted <is> 15 Minutes old remove .....?
-//[{pid: unique id, timestamp: time inserted},...]
-var processWatchList = []
-//if above 80% consistently for 15 minutes go into processWarnList
-//[{pid, timestamp,name, cpu, ctime,memory,elapsed,},...]
-var processWarnList = [];
-const cpuRemoveLevel = 25; // if x < 
-const cpuAddLevel = 30; //if x > 
-const deleteInterval = (320 * 60 * 1000); // 3 hours
-const reportInterval = (90 * 60 * 1000); // 90 min
-
-function checkProcess() {
-  let currentTime = new Date().getTime();
-
-  psLookup.get(function (err, processes) {
-    var sorted = _.sortBy(processes, "cpu");
-    let top5 = sorted.reverse().splice(0, 5);
-    top5.forEach(element => {
-      //check if new && high CPU offender
-      //if offender THEN make object
-
-      var match = function (stored) {
-        if (stored === undefined) {
-          return false;
-        }
-        return element.pid == stored.pid;
-      };
-
-      if (processWatchList.some(
-          match)) { // && (!processWarnList.some(match))
-        //console.log("Caught new high usage process!")
-        reportWarnProcess(element);
-      }
-      //check if comperitavly high usage process has a history //and check if true usage is actually that high
-      if ((!processWatchList.some(match)) && element.cpu >=
-        cpuAddLevel) {
-        //console.log("adding to processWatchList")
-        processWatchList.push({
-          pid: element.pid,
-          cpu: element.cpu,
-          timestamp: currentTime
-        });
-      }
-    });
-    cleanList(processes)
-  });
-}
-
-function cleanList(processes) {
-
-  let currentTime = new Date().getTime();
-
-  _.remove(processWatchList, function (ele) {
-    return (ele.timestamp <= (currentTime - deleteInterval));
-  });
-
-  _.remove(processWarnList, function (ele) {
-    return (ele.timestamp <= (currentTime - deleteInterval));
-  });
-  //if drop below 'cpuRemoveLevel' removed from processWatchList
-  _.remove(processWatchList, function (ele) {
-    var findCPU = function (currentProcess) {
-      return ((currentProcess.pid == ele.pid) && (currentProcess
-        .cpu <=
-        cpuRemoveLevel));
-    };
-    return processes.some(findCPU);
-  });
-  //if drop below 'cpuRemoveLevel' removed from processWarnList
-  _.remove(processWarnList, function (ele) {
-    var findCPU = function (currentProcess) {
-      //matches element && cpu is below removeLevel
-      return ((currentProcess.pid == ele.pid) && (currentProcess
-        .cpu <
-        cpuRemoveLevel));
-    };
-    return processes.some(findCPU);
-  });
-
-}
-
-function reportWarnProcess(processObject) {
-  var match = function (stored) {
-    if (stored === undefined) {
-      return false;
-    }
-    return processObject.pid == stored.pid;
-  };
-  newProcess = {
-    name: processObject.name,
-    pid: processObject.pid,
-    cpu: processObject.cpu,
-    ctime: 0,
-    elapsed: 0,
-    memory: 0,
-    timestamp: new Date().getTime()
-  };
-  pidusage(processObject.pid, function (err, stats) {
-    newProcess.elapsed = toMinutes(stats.elapsed);
-    newProcess.memory = formatBytes(stats.memory);
-    newProcess.timestamp = new Date().getTime(); // getTime()
-  })
-  if (!processWarnList.some(match)) {
-    //newProcess.timestamp = new Date().getTime(); // getTime()
-    processWarnList.push(newProcess);
-  } else {
-    index = _.findIndex(processWarnList, processObject.pid);
-    processWarnList[index] = (newProcess);
-  }
-}
-
-function reportHighUsageProcess() {
-  let currentTime = new Date().getTime();
-  //clean duplicates
-  processWarnList = _.uniqBy(processWarnList, 'pid');
-
-  if (processWarnList.length > 0) {
-    let botMessage = ``;
-    let sorted = _.sortBy(processWarnList, "cpu");
-    processWarnList = sorted.reverse().splice(0, 10);
-    processWarnList.forEach(element => {
-      //this message cannot contain ':' characters
-      if (element.timestamp <= (currentTime - reportInterval)) {
-        botMessage = `This process may be problematic `;
-        botMessage += (`\n` + element.name +
-          ` CPU usage ` + element.cpu +
-          `, memory usage ` + element.memory +
-          `, for ` + toMinutes(currentTime - element.timestamp) +
-          ` minutes, pid ` + element.pid
-        );
-        console.log(botMessage)
-        writeToSlack(botMessage)
-      }
-      botMessage = ``;
-    });
-  } else {
-    console.log('no issues');
-  }
-
-}
-
-function toMinutes(millis) {
-  var minutes = Math.floor(millis / 60000);
-  var seconds = ((millis % 60000) / 1000).toFixed(0);
-  return minutes + "." + (seconds < 10 ? '0' : '') + seconds;
-}
-
-function formatBytes(bytes, decimals) {
-  if (bytes == 0) return '0 Bytes';
-  var k = 1024,
-    dm = decimals <= 0 ? 0 : decimals || 2,
-    sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-    i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
+setInterval(process_watch.checkProcess, 5 * 100);
+setInterval(process_watch.reportHighUsageProcess, 30 * 60 * 1000); // 30 min

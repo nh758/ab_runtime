@@ -1,3 +1,13 @@
+/**
+ * Docker system process_watcher
+ *
+ * @description :: Server-side logic for running stateful checks 
+ *                  on all processes on base operating system.
+ * 
+ *                  How often checks are run is determined by source
+ *                  Source must pass "current-processes" and "pidusage" modules
+ */
+
 var psLookup;
 var pidusage;
 const _ = require("lodash");
@@ -41,7 +51,7 @@ function writeToSlack(message) {
   try {
     currStream.write("__alert:" + message);
   } catch (error) {
-    console.log("currStream not set, cannot write to Slack");
+    console.error("currStream not set, cannot write to Slack");
   }
 }
 //boolean to help us only run check once
@@ -65,9 +75,6 @@ function cleanList(processes, currentTime = new Date().getTime()) {
   // If processes last reported {deleteInterval} ago
   // Remove from Lists
   _.remove(processWatchList, function (ele) {
-    if (ele.name == "mid_usage_ps") {
-      debugger;
-    }
     return (ele.lastDetectTime <= (currentTime - deleteInterval));
   });
   _.remove(processWarnList, function (ele) {
@@ -131,7 +138,7 @@ function recordWarnProcess(processObject, currentTime) {
     // all processes always get updated with this information
     processObject.elapsed = toMinutes(stats.elapsed);
     processObject.memory = formatBytes(stats.memory);
-    //processObject.lastDetectTime = currentTime; // getTime()
+
   })
   if (processWarnList.some(pidStored)) {
     processObject.lastDetectTime = currentTime;
@@ -167,12 +174,12 @@ module.exports = {
   /**
    * init
    * bring in the process watching modules
+   * AND the stream for output to Slack
    */
-  init: function (ps, pid) {
+  init: function (ps, pid, stream) {
     psLookup = ps;
     pidusage = pid;
-    // delete 
-    // return psLookup.get();
+    currStream = stream;
   },
   /**
    * checkProcess
@@ -218,13 +225,13 @@ module.exports = {
 
           // check if process in watch list 
           if (history) {
-            //console.log("detected new high usage process!")
+            // detected new high usage process
             recordWarnProcess(element, currentTime);
           }
 
           // check if already in watch list 
           if (!history) {
-            //console.log("adding to processWatchList")
+            // adding to processWatchList
             processWatchList.push({
               name: element.name,
               pid: element.pid,
@@ -287,12 +294,12 @@ module.exports = {
       });
     } else {
       //Don't writeTo slack if there's no issues!
-      //console.log('no issues');
+
       return ('no issues')
     }
     // either 'some issues' or 
     // the last report message will be returned here
-    console.log(fullReport)
+
     return (fullReport);
   },
   /**

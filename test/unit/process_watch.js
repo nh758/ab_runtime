@@ -97,7 +97,7 @@
 
  describe("process_watch: checkProcess", function () {
    // Test initial check Process functions:
-   process_watch.init(psLookup, pidusage)
+   process_watch.init(psLookup, pidusage, process.stdout)
 
    describe("-> First Process Check ", function () {
      process_watch.checkProcess();
@@ -162,8 +162,7 @@
          elapsed: 0,
          timestamp: fiveMinutesNewer
        }];
-       // Send the new variable  
-       process_watch.init(psLookup, pidusage)
+
        // Run check 
        process_watch.checkProcess();
        let watchList = process_watch.reportProcesses();
@@ -227,8 +226,7 @@
          elapsed: 0,
          timestamp: twentyMinutesNewer
        }];
-       // Send the new 'aged' variable ? 
-       process_watch.init(psLookup, pidusage)
+
        // Run check again
        process_watch.checkProcess();
        let watchList = process_watch.reportProcesses();
@@ -314,8 +312,7 @@
          elapsed: 0,
          timestamp: time
        }];
-       // Send the new 'aged' variables ? 
-       process_watch.init(psLookup, pidusage)
+
        process_watch.checkProcess(time);
        let watchList = process_watch.reportProcesses(time);
        expect(watchList, "Processes should be in watch list ").to
@@ -394,10 +391,8 @@
          elapsed: 0,
          timestamp: time
        }];
-       // Send the new 'unix' variables
-       process_watch.init(psLookup, pidusage)
+
        // Run check again
-       debugger;
        process_watch.checkProcess(time);
        process_watch.checkProcess(time);
        // process_watch.checkProcess(time);
