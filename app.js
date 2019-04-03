@@ -3,6 +3,7 @@ const fs = require("fs");
 const shell = require("shelljs");
 const async = require("async");
 const AB = require("ab-utils");
+const path = require("path");
 //
 const process_watch = require(path.join(__dirname, "src", "process_watch.js"));
 const psLookup = require("current-processes");
@@ -106,6 +107,10 @@ function createServer(socket) {
       console.log("Connection acknowledged.");
       currStream = stream;
 
+      // Now that currStream is updated, send update to process_watch
+      // pass in ps and pid checker libraries, and the new stream
+      process_watch.init(psLookup, pidusage, currStream)
+
       stream._sentValidToken = false;
 
       // Store all connections so we can terminate them if the server closes.
@@ -177,18 +182,6 @@ fs.stat(SOCKETFILE, function (err, stats) {
 // now setup our checkRunning() operation
 setInterval(checkRunning, 5 * 1000);
 
-//Send alert to slack
-function writeToSlack(message) {
-  try {
-    currStream.write("__alert:" + message);
-  } catch (error) {
-    console.log("currStream not set");
-  }
-}
-
-//pass in ps and pid checker libraries, and the stream
-process_watch.init(psLookup, pidusage, currStream)
-
 // now setup our checkUsage() operation
-setInterval(process_watch.checkProcess, 5 * 100);
+setInterval(process_watch.checkProcess, 60 * 1000); // 1 min
 setInterval(process_watch.reportHighUsageProcess, 30 * 60 * 1000); // 30 min

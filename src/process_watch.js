@@ -3,14 +3,15 @@
  *
  * @description :: Server-side logic for running stateful checks 
  *                  on all processes on base operating system.
- * 
- *                  How often checks are run is determined by source
- *                  Source must pass "current-processes" and "pidusage" modules
+ *               How often checks are run is determined by source
+ *               Source must pass "current-processes" and "pidusage" modules
  */
 
 var psLookup;
 var pidusage;
 const _ = require("lodash");
+// Functions output to this stream for reporting
+var currStream;
 /* 
  * if above {cpuAddLevel} go in here
  * if drop below {cpuRemoveLevel} remove
@@ -46,17 +47,29 @@ var deleteInterval = (3 * 60 * 60 * 1000); // 3 hours
 // re-report interval ; (a NEW warn list item is reported after 15 min)
 var reportInterval = (90 * 60 * 1000); // 90 min
 
-//Send alert to slack
+/**
+ * writeToSlack
+ * @param {message} Message for Slack, a string
+ * Beginning of message marked by ':'
+ * Only one 'report' written at a time, 'botMessage' resets.
+ */
 function writeToSlack(message) {
   try {
     currStream.write("__alert:" + message);
   } catch (error) {
-    console.error("currStream not set, cannot write to Slack");
+    console.error("currStream not set, process_watch cannot write to Slack");
   }
 }
+/**
+ * updateCPUTestValues
+ * @param {cpuValue} single cpu value from a current process
+ * cpu type check
+ * Passed in value will be from The first top-usage process
+ * If value <=1 we know it's a unix style OS
+ */
 //boolean to help us only run check once
 var cpuTypeChecked = false;
-//cpu type check
+
 function updateCPUTestValues(cpuValue) {
   if ((cpuRemoveLevel < 1) && (cpuAddLevel < 1)) {
     //already modified
@@ -69,9 +82,18 @@ function updateCPUTestValues(cpuValue) {
   }
   cpuTypeChecked = true;
 }
-
+/**
+ * cleanList
+ * @param {processes} List of currently running processes on server
+ * @param {currentTime} optional param, used to calculate age of process
+ * Cleans 'warn' and 'watch' lists
+ * if older than 'deleteInterval' 
+ * or 
+ * if drop below 'cpuRemoveLevel'
+ * or
+ * if process doesn't exist anymore
+ */
 function cleanList(processes, currentTime = new Date().getTime()) {
-
   // If processes last reported {deleteInterval} ago
   // Remove from Lists
   _.remove(processWatchList, function (ele) {
@@ -103,13 +125,22 @@ function cleanList(processes, currentTime = new Date().getTime()) {
   });
 
 }
-
+/**
+ * toMinutes
+ * @param {number} miliseconds
+ * the difference between two timestamps 
+ * int to be converted to a human readable number
+ */
 function toMinutes(millis) {
   var minutes = Math.floor(millis / 60000);
   var seconds = ((millis % 60000) / 1000).toFixed(0);
   return minutes + "." + (seconds < 10 ? '0' : '') + seconds;
 }
-
+/**
+ * formatBytes
+ * @param {number, null} bytes, (option to be more precise)
+ * int to be converted to a bytes string. 
+ */
 function formatBytes(bytes, decimals) {
   if (bytes == 0) return '0 Bytes';
   var k = 1024,
@@ -168,11 +199,14 @@ function recordWarnProcess(processObject, currentTime) {
     processObject.report = false;
     processWarnList.push(processObject);
   }
-
 }
+
 module.exports = {
   /**
    * init
+   * @param {ps} current-processes npm module
+   * @param {pid} pidusage npm module
+   * @param {steam} output stream for reports. Usually Slack. STDout for testing
    * bring in the process watching modules
    * AND the stream for output to Slack
    */
@@ -181,11 +215,26 @@ module.exports = {
     pidusage = pid;
     currStream = stream;
   },
+
   /**
    * checkProcess
-   * initial checks
+   * @param {currentTime} used track in lists when 'new' and when 'updated'
+   * On first new run we check cpu type
+   * 
+   * new cpuAddLevel processes are added to Watch list
+   * If a  PID 'match' is in Watch already, process is added to Warn list
+   * 
+   * If tracked process is above cpuAddLevel, it's 'last detected' timestamp is updated
+   * If a process is below cpuAddLevel, it can eventually age out of the list
+   * 
+   * 'cleanList' is then run with 'processes,' a current snapshot of all processes.
    */
   checkProcess: function checkProcess(currentTime = new Date().getTime()) {
+    // stops function from crashing server if init hasn't been run
+    if (!psLookup) {
+      console.log("process_watch not initialized");
+      return null;
+    }
     cpuTypeChecked = false;
     psLookup.get(function (err, processes) {
 
@@ -248,11 +297,17 @@ module.exports = {
 
   /**
    * reportHighUsageProcess
+   * @param {currentTime} used to calculate if if an older report needs to be re-sent
    * sends process statistics to Slack channel
+   * if New or reportInterval old
+   * 
+   * updates .reportTime. 
+   * sends individual reports to slack
+   * returns fullReport for unit testing 
    */
   reportHighUsageProcess: function reportHighUsageProcess(currentTime =
     new Date().getTime()) {
-    //let currentTime = new Date().getTime();
+
     // clean duplicates
     processWarnList = _.uniqBy(processWarnList, 'pid');
     // default message
@@ -294,18 +349,15 @@ module.exports = {
       });
     } else {
       //Don't writeTo slack if there's no issues!
-
       return ('no issues')
     }
-    // either 'some issues' or 
-    // the last report message will be returned here
-
+    // either 'some issues' or the full report will be returned here
     return (fullReport);
   },
   /**
    * reportProcesses
    * returns watch list
-   * Only used for testing insert/drop logic
+   * Only used for unit testing insert/drop logic
    */
   reportProcesses: function reportProcesses() {
     if (processWatchList.length > 0) {
