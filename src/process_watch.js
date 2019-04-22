@@ -58,7 +58,7 @@ var reportInterval = (90 * 60 * 1000); // 90 min
 
 /**
  * writeToSlack
- * @param {message} Message for Slack, a string
+ * @param {string} Message for Slack
  * Beginning of message marked by ':'
  * Only one 'report' written at a time, 'botMessage' resets.
  */
@@ -69,7 +69,7 @@ function writeToSlack(message) {
 }
 /**
  * updateCPUTestValues
- * @param {cpuValue} single cpu value from a current process
+ * @param {number} cpuValue single cpu value from a current process
  * cpu type check
  * Passed in value will be from The first top-usage process
  * If value <=1 we know it's a unix style OS
@@ -91,7 +91,7 @@ function updateCPUTestValues(cpuValue) {
 /**
  * cleanList
  * @param {array} processes list of currently running processes on server
- * @param {datetime} currentTime (optional) timestamp used to calculate current age of process.
+ * @param {dateTime} currentTime (optional) timestamp used to calculate current age of process.
  * Cleans 'warn' and 'watch' lists
  * if older than 'deleteInterval' 
  * or 
@@ -160,7 +160,7 @@ function cleanList(processes, currentTime = new Date().getTime()) {
 }
 /**
  * toMinutes
- * @param {number} miliseconds
+ * @param {int} miliseconds
  * the difference between two timestamps 
  * int to be converted to a human readable number
  */
@@ -171,7 +171,8 @@ function toMinutes(millis) {
 }
 /**
  * formatBytes
- * @param {number, null} bytes, (option to be more precise)
+ * @param {int} number of bytes
+ * @param {int} null option to be more precise
  * int to be converted to a bytes string. 
  */
 function formatBytes(bytes, decimals) {
@@ -186,7 +187,7 @@ function formatBytes(bytes, decimals) {
  * recordWarnProcess
  * @param {obj} processObject
  * the report object sent by checkProcess.
- * @param time currentTime
+ * @param {datetime} currentTime
  * the current time, sent by checkProcess.
  */
 function recordWarnProcess(processObject, currentTime) {
@@ -241,8 +242,8 @@ function recordWarnProcess(processObject, currentTime) {
 module.exports = {
   /**
    * init
-   * @param {ps} current-processes npm module
-   * @param {pid} pidusage npm module
+   * @param {arr} ps current-processes npm module
+   * @param {arr} pid pidusage npm module
    * @param {steam} output stream for reports. Usually Slack. STDout for testing
    * bring in the process watching modules
    * AND the stream for output to Slack
@@ -255,7 +256,7 @@ module.exports = {
 
   /**
    * checkProcess
-   * @param {currentTime} used track in lists when 'new' and when 'updated'
+   * @param {datetime} currentTime used track in lists when 'new' and when 'updated'
    * On first new run we check cpu type
    * 
    * new cpuAddLevel processes are added to Watch list
@@ -339,7 +340,7 @@ module.exports = {
 
   /**
    * reportHighUsageProcess
-   * @param {currentTime} used to calculate if if an older report needs to be re-sent
+   * @param {datetime} currentTime used to calculate if if an older report needs to be re-sent
    * sends process statistics to Slack channel
    * if New or reportInterval old
    * 
