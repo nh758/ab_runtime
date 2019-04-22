@@ -1,14 +1,13 @@
-const net = require("net");
-const fs = require("fs");
-const shell = require("shelljs");
-const async = require("async");
 const AB = require("ab-utils");
+//const async = require("async");
+const fs = require("fs");
+const net = require("net");
 const path = require("path");
-//
 const process_watch = require(path.join(__dirname, "src", "process_watch.js"));
 const psLookup = require("current-processes");
 const pidusage = require('pidusage')
-const _ = require("lodash");
+const shell = require("shelljs");
+//const _ = require("lodash");
 
 // const SOCKETFILE = "1338";
 // const SOCKETFILE = "/tmp/ab.sock";

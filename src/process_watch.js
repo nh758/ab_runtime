@@ -11,25 +11,34 @@ var psLookup;
 var pidusage;
 const _ = require("lodash");
 // Functions output to this stream for reporting
+// Socket connection to the Bot_manager service.
 var currStream;
-/* 
+/* List rules;
  * if above {cpuAddLevel} go in here
  * if drop below {cpuRemoveLevel} remove
  * if not detected above {cpuAddLevel} for a {deleteInterval} remove
- * [{pid: unique id, lastDetectTime: last time detected},...]
+ * 
+ * [ {watchEntry},...]
+ * where {watchEntry} is:
+ * [{
+ * pid : {string} the uid of the running process, 
+ * lastDetectTime : last time detected - updates on check process
+ * }]
  */
 var processWatchList = []
 
 /* 
- * If ps detected twice over {cpuAddLevel}
- * [{pid, name, cpu, ctime,memory,reportTime,lastDetectTime,firstDetectTime},...]
- ** reportTime
- * made first save & updated when process is reported 
- * Stops spammy reports, but allows reporting after {reportInterval}
- ** lastDetectTime 
- * last time detected, updates on check process
- ** firstDetectTime 
- * tracks first time a ps was put in Warn list, helps dev see age of ps?
+ * [ {warnEntry},...]
+ * where {warnEntry} is:
+ * [{
+ *   pid : {string} the uid of the running process, 
+ *   name : {string} name of the process, 
+ *   cpu : {int}  value of % cpu usage, 
+ *   memory : {int} value of memory usage,
+ *   reportTime : made first save & updated when process is reported. Stops spammy reports, but allows reporting after {reportInterval},
+ *   lastDetectTime : last time detected - updates on check process,
+ *   firstDetectTime : tracks first time a ps was put in Warn list, helps dev see age of ps
+ * }]
  */
 var processWarnList = [];
 
@@ -54,10 +63,8 @@ var reportInterval = (90 * 60 * 1000); // 90 min
  * Only one 'report' written at a time, 'botMessage' resets.
  */
 function writeToSlack(message) {
-  try {
+  if (currStream) {
     currStream.write("__alert:" + message);
-  } catch (error) {
-    console.error("currStream not set, process_watch cannot write to Slack");
   }
 }
 /**
@@ -67,8 +74,7 @@ function writeToSlack(message) {
  * Passed in value will be from The first top-usage process
  * If value <=1 we know it's a unix style OS
  */
-//boolean to help us only run check once
-var cpuTypeChecked = false;
+
 
 function updateCPUTestValues(cpuValue) {
   if ((cpuRemoveLevel < 1) && (cpuAddLevel < 1)) {
@@ -84,8 +90,8 @@ function updateCPUTestValues(cpuValue) {
 }
 /**
  * cleanList
- * @param {processes} List of currently running processes on server
- * @param {currentTime} optional param, used to calculate age of process
+ * @param {array} processes list of currently running processes on server
+ * @param {datetime} currentTime (optional) timestamp used to calculate current age of process.
  * Cleans 'warn' and 'watch' lists
  * if older than 'deleteInterval' 
  * or 
@@ -105,25 +111,52 @@ function cleanList(processes, currentTime = new Date().getTime()) {
 
   // if process, in current report
   // drops below {cpuRemoveLevel} OR does not exist
-  // Remove from Lists
-  _.remove(processWatchList, function (ele) {
-    var findCPU = function (currentProcess) {
-      return ((currentProcess.pid == ele.pid) && (currentProcess
-        .cpu <=
-        cpuRemoveLevel));
-    };
-    return processes.some(findCPU);
-  });
-  _.remove(processWarnList, function (ele) {
-    var findCPU = function (currentProcess) {
-      //matches element && cpu is below removeLevel
-      return ((currentProcess.pid == ele.pid) && (currentProcess
-        .cpu <
-        cpuRemoveLevel));
-    };
-    return processes.some(findCPU);
-  });
+  // Remove from Lists 
+  _.remove(processWarnList, function (listEntry) {
+    var isNotFound = true;
 
+    function isBelowCPULevel(processes) {
+      // isBelowCPULevel should only return {true} if it is the
+      // current listEntry and we want to remove it.
+
+      // if this is our current listEntry
+      if (processes.pid == listEntry.pid) {
+
+        // mark we found it
+        isNotFound = false;
+
+        // check if it is below our cpuRemoveLevel
+        return (processes.cpu < cpuRemoveLevel);
+      }
+      return false;
+    }
+
+    // remove this entry if it isBelowCPULevel OR it wasn't found
+    return (processes.some(isBelowCPULevel).length > 0 || isNotFound);
+  })
+
+  _.remove(processWatchList, function (listEntry) {
+    var isNotFound = true;
+
+    function isBelowCPULevel(processes) {
+      // isBelowCPULevel should only return {true} if it is the
+      // current listEntry and we want to remove it.
+
+      // if this is our current listEntry
+      if (processes.pid == listEntry.pid) {
+
+        // mark we found it
+        isNotFound = false;
+
+        // check if it is below our cpuRemoveLevel
+        return (processes.cpu < cpuRemoveLevel);
+      }
+      return false;
+    }
+
+    // remove this entry if it isBelowCPULevel OR it wasn't found
+    return (processes.some(isBelowCPULevel).length > 0 || isNotFound);
+  })
 }
 /**
  * toMinutes
@@ -157,7 +190,7 @@ function formatBytes(bytes, decimals) {
  * the current time, sent by checkProcess.
  */
 function recordWarnProcess(processObject, currentTime) {
-  //currentTime = new Date().getTime();
+
   var pidStored = function (stored) {
     if (stored == undefined) {
       return false;
@@ -169,10 +202,9 @@ function recordWarnProcess(processObject, currentTime) {
     // all processes always get updated with this information
     processObject.elapsed = toMinutes(stats.elapsed);
     processObject.memory = formatBytes(stats.memory);
-
   })
   if (processWarnList.some(pidStored)) {
-    processObject.lastDetectTime = currentTime;
+
     //if exists in storage
     // update; cpu, memory, lastDetectTime, 
 
@@ -235,8 +267,13 @@ module.exports = {
       console.log("process_watch not initialized");
       return null;
     }
-    cpuTypeChecked = false;
+    //boolean to help us only run check once
+    let cpuTypeChecked = false;
     psLookup.get(function (err, processes) {
+      if (err) {
+        console.err(err);
+        return (err);
+      }
 
       var sorted = _.sortBy(processes, "cpu");
       let top5 = sorted.reverse().splice(0, 5);
@@ -246,10 +283,6 @@ module.exports = {
         if (!cpuTypeChecked) {
           updateCPUTestValues(element.cpu);
         }
-        //  This allows testing enviroment to pass in times,
-        //  normally current-processes doesn't pass a timestamp
-        currentTime = ((typeof (element.timestamp) !==
-          'undefined') ? element.timestamp : currentTime);
 
         // check if high CPU offender before running log updates
         if (element.cpu >= cpuAddLevel) {
@@ -271,6 +304,10 @@ module.exports = {
             }
           };
           let history = processWatchList.some(match);
+
+          // Note how by inserting to warnlist First, 
+          // a brand new process will Not be in watchlist yet
+          // thus needing a second infraction before Warned about
 
           // check if process in watch list 
           if (history) {
@@ -330,7 +367,8 @@ module.exports = {
             element
             .name +
             //convert .1 to 10 for ease of reading
-            ` CPU usage ` + ((element.cpu <= 1) ? element.cpu * 100 :
+            ` CPU usage ` + ((element.cpu <= 1) ? element.cpu *
+              100 :
               element.cpu) +
             `, memory usage ` + formatBytes(element.memory) +
             `, last detected ` + toMinutes(Math.abs(currentTime -
