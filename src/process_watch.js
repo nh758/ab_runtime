@@ -214,17 +214,22 @@ function recordWarnProcess(processObject, currentTime) {
     })
     /* 
      * found time, Show how long a ps has been on list
-     * age should be difference between found and current time 
+     *     age is difference between found and current time 
+     * reportTime, Show how long since last report
+     * 
+     * If a new process, that is repeat offender, 
+     *     IF Also a little over 15 min old 
+     *         report == true
      */
-    processObject.firstDetectTime = processWarnList[index].firstDetectTime;
-    // reportTime, Show how long since last report
-    processObject.reportTime = processWarnList[index].reportTime;
-    // If a new process, that is repeat offender, allow reporting it
-    // Also a little over 15 min old 
-    processObject.report = ((processObject.reportTime == undefined) && (
-      processObject.firstDetectTime <= (currentTime - 15 * 60 * 1000)));
-    //overwrite previous
-    processWarnList.splice(index, 1, processObject);
+    processWarnList[index].report = ((processWarnList[index].reportTime ==
+      undefined) && (
+      processWarnList[index].firstDetectTime <= (currentTime - 15 * 60 *
+        1000)));
+    //update previous
+    processWarnList[index].lastDetectTime = currentTime;
+    processWarnList[index].elapsed = processObject.elapsed;
+    processWarnList[index].memory = processObject.memory;
+    processWarnList[index].cpu = processObject.cpu;
   } else {
     processObject.lastDetectTime = currentTime;
     processObject.firstDetectTime = currentTime;

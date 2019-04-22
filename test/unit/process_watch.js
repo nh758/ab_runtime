@@ -68,6 +68,13 @@
    memory: 1000000,
    elapsed: 0,
    timestamp: new Date().getTime()
+ }, {
+   name: 'dissapearing_ps',
+   pid: 6,
+   cpu: 70,
+   memory: 1000000,
+   elapsed: 0,
+   timestamp: new Date().getTime()
  }];
  /* psLookup 
   * Replaces a module
@@ -107,8 +114,8 @@
          .to.exist;
        expect(watchList[0], "at least one should be watched").to
          .exist;
-       expect(watchList[3], "Full 4 should be watched").to.exist;
-       expect(watchList[4], "only 4 of 5 should be watched").to.not
+       expect(watchList[4], "Full 5 should be watched").to.exist;
+       expect(watchList[5], "only 5 of 6 should be watched").to.not
          .exist;
        // Check order of insertion?
        // [0].cpu == 99 || [0].name == highusageps ?
@@ -161,12 +168,20 @@
          memory: 1000000,
          elapsed: 0,
          timestamp: fiveMinutesNewer
+       }, {
+         name: 'dissapearing_ps',
+         pid: 6,
+         cpu: 70,
+         memory: 1000000,
+         elapsed: 0,
+         timestamp: new Date().getTime()
        }];
 
        // Run check 
        process_watch.checkProcess();
        let watchList = process_watch.reportProcesses();
-       expect(watchList, "Processes should be in watch list ").to
+       expect(
+           watchList, "Processes should be in watch list ").to
          .exist;
 
        expect(watchList[3],
@@ -225,17 +240,26 @@
          memory: 1001337,
          elapsed: 0,
          timestamp: twentyMinutesNewer
+       }, {
+         name: 'dissapearing_ps',
+         pid: 6,
+         cpu: 70,
+         memory: 1000000,
+         elapsed: 0,
+         timestamp: twentyMinutesNewer
        }];
 
        // Run check again
-       process_watch.checkProcess();
+       process_watch.checkProcess(twentyMinutesNewer);
        let watchList = process_watch.reportProcesses();
-       expect(watchList, "Processes should be in watch list ").to
+       expect(watchList,
+           "Processes should be in watch list ").to
          .exist;
        // Test logic when fed data
-       expect(watchList[3],
-         "Spiky_usage should now be dropped as its old and low usage "
-       ).to.not.exist;
+       // Spiky_usage should now be dropped as its old and low usage "
+       expect(watchList[4].pid,
+         "mid usage should be last item"
+       ).to.equal(3);
        expect(watchList[1].cpu,
          "decreasing_usage should a. be #2 and b. have new CPU value"
        ).to.equal(88);
@@ -251,12 +275,15 @@
        // How often is reported
        let reportTime = ((new Date().getTime()) + (25 * 60 *
          1000));
-       expect(process_watch.reportHighUsageProcess(reportTime),
+       process_watch.checkProcess(reportTime);
+       expect(
+           process_watch.reportHighUsageProcess(reportTime),
            "Since processes reported only 25 min ago, should not be reported"
          ).to
          .equal(
            'issues exist');
-       reportTime = ((new Date().getTime()) + (110 * 60 *
+       reportTime = ((new Date().getTime()) + (110 *
+         60 *
          1000));
        expect(process_watch.reportHighUsageProcess(reportTime),
            "Since processes reported 95 min ago, should be reported"
@@ -312,14 +339,16 @@
          elapsed: 0,
          timestamp: time
        }];
-
+       debugger;
        process_watch.checkProcess(time);
        let watchList = process_watch.reportProcesses(time);
-       expect(watchList, "Processes should be in watch list ").to
+       expect(
+           watchList, "Processes should be in watch list ").to
          .exist;
        //High usage stay
        //mid should age out
        //decreasing should low-cpu drop out
+       //dissapearing has closed, should nolonger appear
        expect(watchList[1],
          "This shouldn't be tracked, either aged or cpu out"
        ).to.not.exist;
@@ -340,7 +369,8 @@
            "mid_usage_ps should age out because it's below add and after delete"
          ).to.not
          .include('mid_usage_ps');
-       expect(report, "good cpu behavior out ").to.not
+       expect(report, "good cpu behavior out ").to
+         .not
          .include('decreasing_usage_ps');
 
        expect(report, "should be reported").to.include(
@@ -395,11 +425,10 @@
        // Run check again
        process_watch.checkProcess(time);
        process_watch.checkProcess(time);
-       // process_watch.checkProcess(time);
-       // process_watch.checkProcess();
        // high, spiky, and decreasing
        let watchList = process_watch.reportProcesses(time);
-       expect(watchList, "Processes should be in watch list ").to
+       expect(
+           watchList, "Processes should be in watch list ").to
          .exist;
 
 
@@ -418,7 +447,8 @@
            "mid_usage_ps should age out because it's below add and after delete"
          ).to.not
          .include('mid_usage_ps');
-       expect(report, "good cpu behavior out ").to.not
+       expect(report, "good cpu behavior out ").to
+         .not
          .include('decreasing_usage_ps');
 
        expect(report, "should be reported").to.include(
