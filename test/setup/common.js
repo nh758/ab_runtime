@@ -1,11 +1,11 @@
 /**
  * Common.js
  * Provides a set of common capability for our test suites.
- * 
+ *
  * AuthLogin()
- * The result of this fn() will be to set a logged in user's 
+ * The result of this fn() will be to set a logged in user's
  * Cookie in our cy test runner object.
- * 
+ *
  * ResetDB()
  * Clears the database back to it's initial starting state, and
  * makes sure our running services reset their Definitions.
@@ -36,8 +36,12 @@ module.exports = {
    },
 
    ResetDB: function (cy) {
+      //Check environment for alternate stack name
+      let stack = Cypress.env('stack');
+      stack = stack === undefined ? '' : ` ${stack}`;
+
       // Clear the Physical DB
-      cy.exec("npm run test:reset");
+      cy.exec(`npm run test:reset${stack}`);
 
       // Have the running services clear their definitions.
       cy.request("POST", "/test/reset", { tenant: Config.tenant });
