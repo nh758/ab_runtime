@@ -1,0 +1,35 @@
+version: "3.2"
+# Override file to make a stack testable, use UP.sh -t
+services:
+
+  db:
+    # NOTE: this file will be pulled into the compose files from the ROOT
+    # directory, so paths must be specified from there:
+    volumes:
+      - type: bind
+        source: ./test/setup/reset.sh
+        target: /reset.sh
+      - type: bind
+        source: ./mysql/init/02-tenant_manager.sql
+        target: /sql/reset_tenant.sql
+      - type: bind
+        source: ./mysql/init/03-site_tables.sql
+        target: /sql/reset.sql
+  #/db
+
+  #api_sails: our API end point
+  # NOTE: we look for this port to be ready before we run our tests
+  api_sails:
+    # When testing, we test our api_sails on port 1337 to verify
+    # the service is up and ready to run before continuing.
+    ports:
+      - "1337:1337"
+      # - "9229:9229"
+    environment:
+      - AB_TESTING=true
+      # AB_TESTING is an environment variable that opens up some
+      # API routes only available in our testing environment.
+    volumes:
+      - type: bind
+        source: ./test/e2e/cypress/integration
+        target: /app/imports
