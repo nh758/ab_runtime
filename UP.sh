@@ -1,12 +1,14 @@
 #!/bin/bash
 Dev=
 Test=
-# Read flags -d for dev, -t for test
-while getopts dt name
+Quiet=
+# Read flags -d for dev, -t for test, -q for no logs
+while getopts dtq name
 do
     case $name in
     d)    Dev="true";;
     t)    Test="true";;
+		q)		Quiet="true"
     esac
 done
 File="docker-compose.yml"
@@ -21,4 +23,7 @@ then
 fi
 nohup node ab_system_monitor.js &> /dev/null &
 docker stack deploy -c $File -c docker-compose.override.yml $TestOveride ab
+if [[ -z $Quiet ]]
+then
 ./logs.js
+fi
