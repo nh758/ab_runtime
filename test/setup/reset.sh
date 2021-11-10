@@ -1,4 +1,4 @@
-rm ./drop_all_tables.mysql
+rm ./drop_all_tables.sql
 
 ## gotta ignore foreigh key checks
 echo "SET FOREIGN_KEY_CHECKS = 0;" > ./drop_all_tables.sql
