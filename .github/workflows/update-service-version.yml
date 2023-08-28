@@ -27,7 +27,7 @@ jobs:
         id: commit_version
         uses: EndBug/add-and-commit@v9
         with:
-          message: 'Update $SERVICE to $VERSION (from GitHub Actions Workflow)'
+          message: Update ${{ env.SERVICE }} to ${{ env.VERSION }} (from GitHub Actions Workflow)
           new_branch: ${{ steps.set_branch.outputs.branch }}
 
   call-run-cy-test:
@@ -82,15 +82,15 @@ jobs:
         env:
           NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
         with:
-          message: 'Update version $NEW_VERSION (from GitHub Actions Workflow)'
-          tag: 'v$NEW_VERSION'
+          message: Update version $NEW_VERSION (from GitHub Actions Workflow)
+          tag: v$NEW_VERSION
 
       - name: Checkout Master
         run: git checkout $MASTER
 
       - name: Merge to master
         env:
-          COMMIT_MSG: 'Update $SERVICE to $VERSION (from GitHub Actions Workflow)'
+          COMMIT_MSG: Update $SERVICE to $VERSION (from GitHub Actions Workflow)
         run: git merge --squash $BRANCH -m $COMMIT_MSG
 
       - name: Push
@@ -99,8 +99,8 @@ jobs:
       - name: Create release on GitHub
         uses: ncipollo/release-action@v1
         with:
-          tag: 'v${{ steps.increment_version.outputs.new_version }}'
-          body: '$SERVICE updated to $VERSION'
+          tag: v${{ steps.increment_version.outputs.new_version }}
+          body: $SERVICE updated to $VERSION
           token: ${{ secrets.GITHUB_TOKEN }}
       
       # - Delete the branch
@@ -120,7 +120,7 @@ jobs:
             github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`
-              base: master
+              title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`,
+              base: "master",
               head: BRANCH
             })
