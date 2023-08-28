@@ -107,20 +107,25 @@ jobs:
 
   fail:
     name: Create a PR
-    needs: call-run-cy-test
-    if: ${{ failure() || github.event.client_payload.type == 'major' }} 
+    needs: [ update, call-run-cy-test ]
+    if: ${{ failure() || github.event.client_payload.type == 'major' }}
     runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ needs.update.outputs.branch }}
+      RUN_URL: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
     steps: 
       - uses: actions/github-script@v6
         id: my-script
         with:
           result-encoding: string
           script: |
-            const { SERVICE, VERSION, BRANCH } = process.env;
+            const { SERVICE, VERSION, BRANCH, TYPE, RUN_URL } = process.env;
+            const body = TYPE == 'major' ? 'This is a major service update. Automatic updating disabled. Review and merge manually if ready.' : `Automatic updated failed. Check the E2E tests. ${RUN_URL}`;
             github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`,
               base: "master",
-              head: BRANCH
+              head: BRANCH,
+              body,
             })
