@@ -1,11 +1,11 @@
 name: E2E Tests
 on:
    # Run on any commit to the #master branch
-   push:
-      branches: [master]
-   # Run on pull requests into the #master branch
-   pull_request:
-      branches: [master]
+   # push:
+   #    branches: [master]
+   # # Run on pull requests into the #master branch
+   # pull_request:
+   #    branches: [master]
    # Allows user to trigger the workflow from GitHub's web UI
    workflow_dispatch:
 
