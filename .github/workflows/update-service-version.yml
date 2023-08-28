@@ -5,6 +5,8 @@ on:
 env:
   SERVICE: ${{ github.event.client_payload.service }}
   VERSION: ${{ github.event.client_payload.version }}
+  TYPE: ${{ github.event.client_payload.type }}
+  MASTER: nh/sv-testing
 jobs:
   update:
     name: Update
@@ -18,7 +20,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
-        path: ab
+        with: 
+          path: ab
+          branch: $MASTER
       
       - name: Version Update
         run: node versionUpdate $SERVICE $VERSION
@@ -40,16 +44,19 @@ jobs:
 
   publish:
     needs: call-run-cy-test
+    if: $TYPE == "minor" || $TYPE == "patch"
     runs-on: ubuntu-latest
     env:
       BRANCH: ${{ jobs.update.outputs.branch }}
-      TYPE: ${{ github.event.client_payload.type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         path: ab
         with:
           branch: $BRANCH
+
+      - name: Install semver package
+        run: npm i semver
 
       - name: Increment the Runtime Version
         uses: actions/github-script@v6
@@ -85,7 +92,7 @@ jobs:
           working-directory: ./ab
 
       - name: Checkout Master
-        run: git checkout master
+        run: git checkout $MASTER
         working-directory: ./ab
 
       - name: Merge to master
@@ -107,9 +114,9 @@ jobs:
       
       # - Delete the branch
 
-    fail:
+  fail:
     needs: publish
-    if: {{ failure() }}
+    if: {{ failure() }} || $TYPE == "patch"
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/github-script@v6
