@@ -17,7 +17,7 @@ async function getVersionFile() {
       return JSON.parse(contents);
    } catch (err) {
       console.error(`Error reading version file:\n`, err);
-      process.exit();
+      process.exit(1);
    }
 }
 
@@ -28,7 +28,7 @@ async function writeVersionFile(contents) {
       });
    } catch (err) {
       console.error(`Error writing version file:\n`, err);
-      process.exit();
+      process.exit(1);
    }
 }
 
@@ -41,7 +41,7 @@ async function updateServiceVersion(service, newVersion) {
          service,
          Object.keys(versions.services).join("\n - ")
       );
-      process.exit();
+      process.exit(1);
    }
    versions.services[service] = newVersion;
    writeVersionFile(versions);
@@ -61,13 +61,13 @@ switch (command) {
          console.log(
             "Expected argument name (service name)\nusage: node versionUpdate service [name] [version]"
          );
-         process.exit();
+         process.exit(1);
       }
       if (!version) {
          console.log(
             "Expected argument version\nusage: node versionUpdate service [name] [version]"
          );
-         process.exit();
+         process.exit(1);
       }
       updateServiceVersion(arg1, version);
       break;
@@ -76,7 +76,7 @@ switch (command) {
          console.log(
             "Expected argument type\nusage: node versionUpdate version [version]"
          );
-         process.exit();
+         process.exit(1);
       }
       updateMetaVersion(arg1);
       break;
