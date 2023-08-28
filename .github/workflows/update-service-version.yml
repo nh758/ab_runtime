@@ -117,6 +117,13 @@ jobs:
           result-encoding: string
           script: |
             const { SERVICE, VERSION, BRANCH } = process.env;
+            console.log({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`,
+              base: "master",
+              head: BRANCH
+            });
             github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
