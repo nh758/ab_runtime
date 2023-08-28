@@ -10,40 +10,19 @@
  * Clears the database back to it's initial starting state, and
  * makes sure our running services reset their Definitions.
  */
-const Config = require("./config.js");
-
-var loggedInCookie = null;
-// {obj} cypress cookie
-// remember the cookie we get back after a Successful Login.
-
 module.exports = {
    AuthLogin: function (cy) {
-      if (!loggedInCookie) {
-         cy.request("POST", "/auth/login", {
-            tenant: Config.tenant,
-            email: Config.user.email,
-            password: Config.user.password,
-         })
-            .its("body")
-            .as("currentUser");
-
-         cy.getCookie("sails.sid").then((cookie) => {
-            loggedInCookie = cookie;
-         });
-      } else {
-         cy.setCookie(loggedInCookie.name, loggedInCookie.value);
-      }
+      cy.log("Refactored: Use cy.AuthLogin()");
+      cy.AuthLogin();
    },
 
    ResetDB: function (cy) {
-      //Check environment for alternate stack name
-      let stack = Cypress.env('stack');
-      stack = stack === undefined ? '' : ` ${stack}`;
+      cy.log("Refactored: Use cy.ResetDB()");
+      cy.ResetDB();
+   },
 
-      // Clear the Physical DB
-      cy.exec(`npm run test:reset${stack}`);
-
-      // Have the running services clear their definitions.
-      cy.request("POST", "/test/reset", { tenant: Config.tenant });
+   RunSQL: function (cy, folder, files) {
+      cy.log("Refactored: use cy.RunSQL(folder, files)");
+      cy.RunSQL(folder, files, false);
    },
 };

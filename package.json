@@ -1,32 +1,29 @@
 {
   "devDependencies": {
-    "babel-eslint": "^10.0.1",
-    "cypress": "^8.0.0",
-    "eslint": "^7.7.0",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-prettier": "^3.1.4",
-    "prettier": "^2.1.1"
+    "cypress": "^12.5.1",
+    "env-cmd": "^10.1.0",
+    "eslint": "^8.27.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-prettier": "^4.2.1"
   },
   "dependencies": {
     "@slack/bolt": "^3.5.0",
-    "ab-utils": "github:Hiro-Nakamura/ab-utils#master",
-    "async": "^3.2.0",
-    "forever": "^3.0.2",
-    "nodemon": "^2.0.4",
-    "shelljs": "^0.8.4",
-    "uuid": "^8.3.0"
+    "ab-utils": "github:digi-serve/ab-utils#master",
+    "async": "^3.2.4",
+    "dotenv": "^16.0.3",
+    "nodemon": "^2.0.20",
+    "shelljs": "^0.8.4"
   },
   "scripts": {
-    "ssl": "",
-    "boot": "docker stack deploy -c docker-compose.yml ab & ./node_modules/.bin/forever start app.js",
-    "dev-compose": "docker-compose -f docker-compose.dev.yml up & node_modules/.bin/nodemon app.js",
-    "dev": "node_modules/.bin/nodemon app.js & docker stack deploy -c docker-compose.dev.yml ab",
-    "cypress:open": "cypress open --project ./test/e2e",
-    "test": "appbuilder test setup ab && npm run test:wait &&  npm run test:e2e",
-    "test:boot": "docker stack deploy -c docker-compose.dev.yml -c ./test/setup/test-compose.yml test_ab",
-    "test:down": "appbuilder test down ab",
-    "test:wait": "appbuilder test waitBoot ab",
-    "test:e2e": "npx cypress run --reporter dot --project ./test/e2e",
+    "cypress:open": "env-cmd cypress open --project ./test/e2e",
+    "test:boot": "env-cmd docker stack deploy -c docker-compose.dev.yml -c ./test/setup/test-compose.yml test_ab",
+    "test:down": "docker stack rm test_ab",
+    "test:e2e": "env-cmd cypress run --reporter dot --project ./test/e2e",
+    "test:e2e:ab-runtime": "env-cmd cypress run --config-file cypress.ab_runtime.mjs --reporter dot --project ./test/e2e",
+    "test:e2e:app": "env-cmd cypress run --config-file cypress.app.mjs --reporter dot --project ./test/e2e",
+    "test:e2e:ab-designer": "env-cmd cypress run --config-file cypress.plugin.ab_designer.mjs --reporter dot --project ./test/e2e",
     "test:reset": "bash testReset.sh"
-  }
+  },
+  "version": "2.0.0"
 }

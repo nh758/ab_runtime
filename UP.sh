@@ -1,4 +1,10 @@
 #!/bin/bash
+
+# Import ENV variables
+set -o allexport
+source .env
+set +o allexport
+
 Dev=
 Test=
 Quiet=
@@ -8,21 +14,21 @@ do
     case $name in
     d)    Dev="true";;
     t)    Test="true";;
-		q)		Quiet="true"
+    q)    Quiet="true"
     esac
 done
 File="docker-compose.yml"
 TestOveride=""
 if [[ -n $Dev ]]
 then
-	File="docker-compose.dev.yml"
+    File="docker-compose.dev.yml"
 fi
 if [[ -n $Test ]]
 then
-	TestOveride="-c ./test/setup/ci-test.overide.yml"
+    TestOveride="-c ./test/setup/ci-test.overide.yml"
 fi
 nohup node ab_system_monitor.js &> /dev/null &
-docker stack deploy -c $File -c docker-compose.override.yml $TestOveride ab
+docker stack deploy -c $File -c docker-compose.override.yml $TestOveride ${STACKNAME}
 if [[ -z $Quiet ]]
 then
 ./logs.js

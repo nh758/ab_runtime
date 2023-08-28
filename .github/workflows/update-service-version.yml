@@ -1,0 +1,134 @@
+name: "Update Version"
+on:
+  repository_dispatch:
+    type: [service_new_version]
+env:
+  SERVICE: ${{ github.event.client_payload.service }}
+  VERSION: ${{ github.event.client_payload.version }}
+  TYPE: ${{ github.event.client_payload.type }}
+  MASTER: nh/sv-testing
+jobs:
+  update:
+    name: Update
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.set_branch.outputs.branch }}
+    steps:
+      - name: Set branch name
+        id: set_branch
+        run: echo "branch=CI/update/$SERVICE-$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with: 
+          path: ab
+          branch: $MASTER
+      
+      - name: Version Update
+        run: node versionUpdate $SERVICE $VERSION
+        working-directory: ./ab
+
+      - name: Commit Change to New Branch
+        id: commit_version
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: 'Update $SERVICE to $VERSION (from GitHub Actions Workflow)'
+          new_branch: ${{ steps.set_branch.outputs.branch }}
+          working-directory: ./ab
+
+  call-run-cy-test:
+    needs: update
+    uses: ./.github/workflows/run-cy-test.yml
+    with:
+      branch: ${{ jobs.update.outputs.branch }}
+
+  publish:
+    needs: call-run-cy-test
+    if: $TYPE == "minor" || $TYPE == "patch"
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ jobs.update.outputs.branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        path: ab
+        with:
+          branch: $BRANCH
+
+      - name: Install semver package
+        run: npm i semver
+
+      - name: Increment the Runtime Version
+        uses: actions/github-script@v6
+        id: increment_version
+        with:
+          result-encoding: string
+          script: |
+            const semver = require('semver');
+            const type = process.env.TYPE;
+            const stdout = []
+            const listeners = {
+              stdout: (data) => stdout.push(data.toString());
+            }
+            await exec.exec("npm pkg get version", { listeners });
+            let version = JSON.parse(stdout.join(""));
+            version = semver.inc(version, type);
+            await exec.exec(`npm pkg set version=${version}`);
+            core.setOutput('new_version', version);
+
+      - name: Updates version.json
+        env:
+          NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
+        run: node versionUpdate version $NEW_VERSION
+
+      - name: Commit Change to New Branch
+        id: commit_version
+        uses: EndBug/add-and-commit@v9
+        env:
+          NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
+        with:
+          message: 'Update version $NEW_VERSION (from GitHub Actions Workflow)'
+          tag: 'v$NEW_VERSION'
+          working-directory: ./ab
+
+      - name: Checkout Master
+        run: git checkout $MASTER
+        working-directory: ./ab
+
+      - name: Merge to master
+        env:
+          COMMIT_MSG: 'Update $SERVICE to $VERSION (from GitHub Actions Workflow)'
+        run: git merge --squash $BRANCH -m $COMMIT_MSG
+        working-directory: ./ab
+
+      - name: Push
+        run: git push
+        working-directory: ./ab
+         
+      - name: Create release on GitHub
+        uses: ncipollo/release-action@v1
+        with:
+          tag: 'v${{ steps.increment_version.outputs.new_version }}'
+          body: '$SERVICE updated to $VERSION'
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # - Delete the branch
+
+  fail:
+    needs: publish
+    if: {{ failure() || $TYPE == "patch" }} 
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/github-script@v6
+        id: my-script
+        with:
+          result-encoding: string
+          script: |
+            const { SERVICE, VERSION, BRANCH } = process.env;
+            github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`
+              base: master
+              head: BRANCH
+            })

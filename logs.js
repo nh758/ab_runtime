@@ -1,25 +1,54 @@
 #!/usr/bin/env node
 //
 // Logs.js
-// Connect to the running containers and pipe their logs to the console.
+// Connect to the running containers and pipe their logs to the console or a file.
+// --toFile [filepath]
 //
+require("dotenv").config();
 const async = require("async");
 const os = require("os");
 const shell = require("shelljs");
 const { spawn } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+// These functions are overwriten if we choose to log to file
+let log = (...args) => console.log(...args);
+let logError = (...args) => console.error(...args);
+let end = (signal) => closeDown(signal);
+
+if (process.argv[2] == "--toFile") {
+   const filepath = process.argv[3] ?? "logs/dockerLogs.txt";
+   const directory = path.dirname(filepath);
+   fs.mkdirSync(directory, { recursive: true });
+   const stream = fs.createWriteStream(filepath);
+   end = (signal) => {
+      stream.end();
+      closeDown(signal);
+   };
+   log = (text) => {
+      stream.write(text, (err) => {
+         if (err) {
+            console.log(err);
+         }
+      });
+   };
+   logError = (text) => log(text);
+}
 
 var stdout = null;
 if (os.platform() == "win32") {
    // windows method of gathering the service names:
    stdout = shell
       .exec(
-         `for /f "tokens=2" %a in ('docker service ls ^| findstr "ab_" ') do @echo %a`
+         `for /f "tokens=2" %a in ('docker service ls ^| findstr "${process.env.STACKNAME}_" ') do @echo %a`
       )
       .stdout.replace(/\r/g, "");
 } else {
    // common unix method of gathering the service names:
-   stdout = shell.exec(`docker service ls | grep "ab_" | awk '{ print $2 }'`)
-      .stdout;
+   stdout = shell.exec(
+      `docker service ls | grep "${process.env.STACKNAME}_" | awk '{ print $2 }'`
+   ).stdout;
 }
 
 var allServiceIDs = stdout.split("\n");
@@ -34,7 +63,7 @@ var closeDown = (signal) => {
 
    allServiceIDs.forEach((id) => {
       if (allServices[id]) {
-         console.log(`closing ${id} with ${signal}`);
+         log(`closing ${id} with ${signal}`);
          allServices[id].kill(signal);
       }
    });
@@ -76,11 +105,11 @@ async.eachSeries(
          // stdio: ["ignore", "ignore", "ignore"]
       });
       logger.stdout.on("data", (data) => {
-         console.log(cleanText(id, data.toString()));
+         log(cleanText(id, data.toString()));
       });
 
       logger.stderr.on("data", (data) => {
-         console.error(cleanText(id, data.toString()));
+         logError(cleanText(id, data.toString()));
       });
 
       if (id.length > maxIDLength) {
@@ -92,13 +121,13 @@ async.eachSeries(
    },
    (err) => {
       if (err) {
-         console.error(err);
-         console.log();
-         closeDown("SIGINT");
+         logError(err);
+         log();
+         end("SIGINT");
          process.exit();
       }
    }
 );
 
-process.on("SIGINT", closeDown);
-process.on("SIGTERM", closeDown);
+process.on("SIGINT", end);
+process.on("SIGTERM", end);

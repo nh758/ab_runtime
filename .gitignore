@@ -25,6 +25,16 @@ mysql/data/**
 redis/data/**
 !redis/data/.gitkeep
 
+logs/*
+!/logs/README.md
+!/logs/appbuilder/
+!/logs/fail2ban/
+
+/test/e2e/cypress/e2e/**/*
+!/test/e2e/cypress/e2e/*.js
+!/test/e2e/cypress/e2e/plugins/
+!/test/e2e/cypress/e2e/test_import/
+
 ################################################
 # Miscellaneous
 #
@@ -34,6 +44,7 @@ redis/data/**
 
 *~
 *#
+.env
 .DS_STORE
 .netbeans
 nbproject

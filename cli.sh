@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Import ENV variables
+set -o allexport
+source .env
+set +o allexport
+
+
 Service=$1
 if [ -z "$Service" ]
 then
@@ -7,7 +14,7 @@ then
 	# echo "            --> provide the container ref to use"
 	# echo "                [ mongo, controller, nginx, etc... ]"
 	# echo ""
-	Service="ab_api_sails"
+	Service="${STACKNAME}_api_sails"
 fi
 
 ID_Service=`docker ps | grep $Service | awk '{ print $1 }'`

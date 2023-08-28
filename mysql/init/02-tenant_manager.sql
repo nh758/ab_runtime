@@ -40,7 +40,7 @@ LOCK TABLES `site_tenant` WRITE;
 
 INSERT INTO `site_tenant` (`id`, `uuid`, `key`, `properties`)
 VALUES
-  (1,'admin','admin','{ \"title\":\"Tenant Admin\", \"authType\":\"login\" }');
+  (1,'admin','admin','{ \"title\":\"Tenant Admin\", \"authType\":\"login\", \"url\":\"##admin-url##\" }');
 
 /*!40000 ALTER TABLE `site_tenant` ENABLE KEYS */;
 UNLOCK TABLES;

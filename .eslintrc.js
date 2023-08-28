@@ -11,14 +11,14 @@ module.exports = {
    },
 
    // "parser": "babel-eslint",
-   extends: ["eslint:recommended", "prettier"], // extending recommended config and config derived from eslint-config-prettier
+   extends: ["eslint:recommended", "prettier", "plugin:cypress/recommended"], // extending recommended config and config derived from eslint-config-prettier
 
    globals: {
       webix: "readonly",
       $$: "readonly",
    },
 
-   plugins: ["prettier"],
+   plugins: ["prettier", "cypress"],
    rules: {
       "prettier/prettier": [
          // customizing prettier rules (unfortunately not many of them are customizable)
