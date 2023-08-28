@@ -38,7 +38,7 @@ jobs:
 
   call-run-cy-test:
     needs: update
-    uses: ./.github/run-cy-test.yml
+    uses: ./.github/workflows/run-cy-test.yml
     with:
       branch: ${{ jobs.update.outputs.branch }}
 
@@ -116,7 +116,7 @@ jobs:
 
   fail:
     needs: publish
-    if: {{ failure() }} || $TYPE == "patch"
+    if: {{ failure() || $TYPE == "patch" }} 
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/github-script@v6
