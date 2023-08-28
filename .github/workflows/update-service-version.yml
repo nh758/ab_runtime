@@ -40,14 +40,14 @@ jobs:
     needs: update
     uses: ./.github/workflows/run-cy-test.yml
     with:
-      branch: ${{ jobs.update.outputs.branch }}
+      branch: ${{ needs.update.outputs.branch }}
 
   publish:
-    needs: call-run-cy-test
+    needs: [ update, call-run-cy-test]
     if: $TYPE == "minor" || $TYPE == "patch"
     runs-on: ubuntu-latest
     env:
-      BRANCH: ${{ jobs.update.outputs.branch }}
+      BRANCH: ${{ needs.update.outputs.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
