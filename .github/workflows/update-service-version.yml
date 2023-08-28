@@ -9,7 +9,7 @@ env:
   MASTER: nh/sv-testing
 jobs:
   update:
-    name: Update
+    name: Update `version.json`
     runs-on: ubuntu-latest
     outputs:
       branch: ${{ steps.set_branch.outputs.branch }}
@@ -37,23 +37,25 @@ jobs:
           working-directory: ./ab
 
   call-run-cy-test:
+    name: Test
     needs: update
     uses: ./.github/workflows/run-cy-test.yml
     with:
       branch: ${{ needs.update.outputs.branch }}
 
   publish:
+    name: Publish Changes
     needs: [ update, call-run-cy-test]
-    if: $TYPE == "minor" || $TYPE == "patch"
+    if: ${{ github.event.client_payload.type == 'minor' || github.event.client_payload.type == 'patch' }}
     runs-on: ubuntu-latest
     env:
       BRANCH: ${{ needs.update.outputs.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        path: ab
         with:
           branch: $BRANCH
+          path: ab
 
       - name: Install semver package
         run: npm i semver
@@ -115,8 +117,9 @@ jobs:
       # - Delete the branch
 
   fail:
-    needs: publish
-    if: {{ failure() || $TYPE == "patch" }} 
+    name: Create a PR
+    needs: call-run-cy-test
+    if: ${{ failure() || github.event.client_payload.type == 'major' }} 
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/github-script@v6
