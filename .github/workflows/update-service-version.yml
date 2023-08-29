@@ -89,35 +89,24 @@ jobs:
           NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
         with:
           message: Update version ${{ env.NEW_VERSION }}
-          # tag: v${{ env.NEW_VERSION }}
+          tag: v${{ env.NEW_VERSION }}
           default_author: github_actions
 
-      - name: Checkout Master
-        run: git checkout master
-      
-      - name: Checkout ${{ env.BRANCH }}
-        run: git checkout ${{ env.BRANCH }}
-
-      - name: Rebase
-        run: git rebase master
-
-      - name: Checkout Master
-        run: git checkout master
-
-      - name: Merge to master
-        env:
-          COMMIT_MSG: Update ${{ env.SERVICE }} to ${{ env.VERSION }}
-        run: git merge "${{ env.BRANCH }}"
-        # --squash -m "${{ env.COMMIT_MSG }}"
-      - name: Push
-        run: git push
+      - name: Rebase & Merge
+        run: | 
+          git checkout master &&
+          git checkout ${{ env.BRANCH }} &&
+          git rebase master &&
+          git checkout master &&
+          git merge "${{ env.BRANCH }}" &&
+          git push
          
-      # - name: Create release on GitHub
-      #   uses: ncipollo/release-action@v1
-      #   with:
-      #     tag: v${{ steps.increment_version.outputs.new_version }}
-      #     body: ${{ env.SERVICE }} updated to ${{ env.VERSION }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release on GitHub
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.increment_version.outputs.new_version }}
+          body: ${{ env.SERVICE }} updated to ${{ env.VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       # - Delete the branch
 
