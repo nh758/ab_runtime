@@ -29,6 +29,7 @@ jobs:
         with:
           message: Update ${{ env.SERVICE }} to ${{ env.VERSION }} (from GitHub Actions Workflow)
           new_branch: ${{ steps.set_branch.outputs.branch }}
+          default_author: github_actions
 
   call-run-cy-test:
     name: Test
@@ -48,7 +49,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          branch: $BRANCH
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 5
 
       - name: Install semver package
         run: npm i semver
@@ -61,20 +63,24 @@ jobs:
           script: |
             const semver = require('semver');
             const type = process.env.TYPE;
-            const stdout = []
+            const output = [];
             const listeners = {
-              stdout: (data) => stdout.push(data.toString());
-            }
-            await exec.exec("npm pkg get version", { listeners });
-            let version = JSON.parse(stdout.join(""));
+              stdout: (data) => output.push(data.toString()),
+              stderr: (data) => console.log("stderr: %s", data)
+            };
+            await exec.exec("npm", ["pkg", "get", "version"], { listeners });
+            console.log("op", output);
+            let version = JSON.parse(output.join(""));
+            console.log("v", version);
             version = semver.inc(version, type);
-            await exec.exec(`npm pkg set version=${version}`);
+            console.log("v", version);
+            await exec.exec("npm", ["pkg", "set", `version=${version}`]);
             core.setOutput('new_version', version);
 
       - name: Updates version.json
         env:
           NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
-        run: node versionUpdate version $NEW_VERSION
+        run: node versionUpdate.mjs version ${{ env.NEW_VERSION }}
 
       - name: Commit Change to New Branch
         id: commit_version
@@ -82,26 +88,36 @@ jobs:
         env:
           NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
         with:
-          message: Update version $NEW_VERSION (from GitHub Actions Workflow)
-          tag: v$NEW_VERSION
+          message: Update version ${{ env.NEW_VERSION }}
+          # tag: v${{ env.NEW_VERSION }}
+          default_author: github_actions
 
       - name: Checkout Master
-        run: git checkout $MASTER
+        run: git checkout master
+      
+      - name: Checkout ${{ env.BRANCH }}
+        run: git checkout ${{ env.BRANCH }}
+
+      - name: Rebase
+        run: git rebase master
+
+      - name: Checkout Master
+        run: git checkout master
 
       - name: Merge to master
         env:
-          COMMIT_MSG: Update $SERVICE to $VERSION (from GitHub Actions Workflow)
-        run: git merge --squash $BRANCH -m $COMMIT_MSG
-
+          COMMIT_MSG: Update ${{ env.SERVICE }} to ${{ env.VERSION }}
+        run: git merge "${{ env.BRANCH }}"
+        # --squash -m "${{ env.COMMIT_MSG }}"
       - name: Push
         run: git push
          
-      - name: Create release on GitHub
-        uses: ncipollo/release-action@v1
-        with:
-          tag: v${{ steps.increment_version.outputs.new_version }}
-          body: $SERVICE updated to $VERSION
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create release on GitHub
+      #   uses: ncipollo/release-action@v1
+      #   with:
+      #     tag: v${{ steps.increment_version.outputs.new_version }}
+      #     body: ${{ env.SERVICE }} updated to ${{ env.VERSION }}
+      #     token: ${{ secrets.GITHUB_TOKEN }}
       
       # - Delete the branch
 
