@@ -1,4 +1,5 @@
 name: "Update Version"
+run-name: Update ${{ github.event.client_payload.service }} to ${{ github.event.client_payload.version }}
 on:
   repository_dispatch:
     type: [service_new_version]
@@ -108,7 +109,10 @@ jobs:
           body: ${{ env.SERVICE }} updated to ${{ env.VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       
-      # - Delete the branch
+      - name: Delete branch ${{ env.BRANCH }}
+        uses: dawidd6/action-delete-branch@v3
+        with:
+          branches: ${{ env.BRANCH }}
 
   fail:
     name: Create a PR
