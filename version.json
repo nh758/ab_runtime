@@ -1,7 +1,7 @@
- {
+{
    "meta_version": "0.1.0",
    "services": {
-      "api_sails": "develop",
+      "api_sails": "1.2.1",
       "appbuilder": "develop",
       "db": "master",
       "web": "master",
