@@ -46,7 +46,8 @@ jobs:
     uses: ./.github/workflows/bump-version.yml
     with:
       ref: ${{ needs.update.outputs.branch }}
-      type: ${{ github.event.client_payload.type }}
+      # For the runtime, consider service version updates as patch
+      type: patch
 
   merge-release:
     name: Merge & Release
@@ -102,11 +103,17 @@ jobs:
           script: |
             const { SERVICE, VERSION, BRANCH, TYPE, RUN_URL } = process.env;
             const body = TYPE == 'major' ? 'This is a major service update. Automatic updating disabled. Review and merge manually if ready.' : `Automatic updated failed. Check the E2E tests. ${RUN_URL}`;
-            github.rest.pulls.create({
+            const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Update ${SERVICE} to ${VERSION} (from GitHub Actions Workflow)`,
               base: "master",
               head: BRANCH,
               body,
-            })
+            });
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: [{name: 'minor'}],
+            });
