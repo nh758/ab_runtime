@@ -15,12 +15,12 @@ jobs:
          CYPRESS_DEFAULT_COMMAND_TIMEOUT: 30000
          CYPRESS_RETRIES: 2
       steps:
-        #  - name: Install AppBuilder
-        #    uses: digi-serve/ab-install-action@v1
-        #    with:
-        #       folder: ab
-        #       port: 8080
-        #       runtime: ${{ inputs.ref }}
+         - name: Install AppBuilder
+           uses: digi-serve/ab-install-action@v1
+           with:
+              folder: ab
+              port: 8080
+              runtime: ${{ inputs.ref }}
 
          - name: Check out kitchen-sink tests
            uses: actions/checkout@v3
@@ -28,38 +28,38 @@ jobs:
               repository: digi-serve/kitchensink_app
               path: ab/test/e2e/cypress/e2e/kitchensink_app
 
-        #  - name: Deploy Stack
-        #    run: ./UP.sh -t -q
-        #    working-directory: ./ab
+         - name: Deploy Stack
+           run: ./UP.sh -t -q
+           working-directory: ./ab
 
-        #  # These next steps are to save our ablogs to file
-        #  - run: npm install pm2@latest -g
-        #  - name: Save Logs
-        #    run: pm2 start ./logs.js -- --toFile logs/ABServices.log
-        #    working-directory: ./ab
+         # These next steps are to save our ablogs to file
+         - run: npm install pm2@latest -g
+         - name: Save Logs
+           run: pm2 start ./logs.js -- --toFile logs/ABServices.log
+           working-directory: ./ab
 
-        #  # Temp get the docker tags form the version file -> we should do this in the installer
-        #  - run: node dockerImageUpdate
+         # Temp get the docker tags form the version file -> we should do this in the installer
+         - run: node dockerImageUpdate
 
-        # #Run test
-        #  - name: Wait for AB
-        #    uses: ifaxity/wait-on-action@v1.1.0
-        #    with:
-        #       resource: http://localhost:8080
-        #       timeout: 300000
+        #Run test
+         - name: Wait for AB
+           uses: ifaxity/wait-on-action@v1.1.0
+           with:
+              resource: http://localhost:8080
+              timeout: 300000
 
-        #  - name: Run Cypress Tests
-        #    run: npm run test:e2e:ab-runtime -- --browser chrome
-        #    working-directory: ./ab
+         - name: Run Cypress Tests
+           run: npm run test:e2e:ab-runtime -- --browser chrome
+           working-directory: ./ab
 
-        #  - uses: actions/upload-artifact@v3
-        #    if: failure()
-        #    with:
-        #       name: cypress-screenshots
-        #       path: ./ab/test/e2e/cypress/screenshots
+         - uses: actions/upload-artifact@v3
+           if: failure()
+           with:
+              name: cypress-screenshots
+              path: ./ab/test/e2e/cypress/screenshots
 
-        #  - uses: actions/upload-artifact@v3
-        #    if: failure()
-        #    with:
-        #       name: ABServices.log
-        #       path: ./ab/logs/ABServices.log
+         - uses: actions/upload-artifact@v3
+           if: failure()
+           with:
+              name: ABServices.log
+              path: ./ab/logs/ABServices.log
