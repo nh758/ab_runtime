@@ -1,0 +1,11 @@
+name: Test
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  call-run-cy-test:
+    name: Test
+    uses: ./.github/workflows/cy-tests.yml
+    with:
+      ref: ${{ gtihub.ref }}
