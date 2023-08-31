@@ -9,8 +9,11 @@ on:
         required: true
         type: string
         default: ${{ github.ref }}
+    outputs:
+      new_version:
+        value: ${{ jobs.bump.outputs.new_version }}
 jobs:
-  publish:
+  bump:
     name: Bump Version
     runs-on: ubuntu-latest
     outputs:

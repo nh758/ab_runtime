@@ -44,16 +44,13 @@ jobs:
     if: ${{ github.event.client_payload.type == 'minor' || github.event.client_payload.type == 'patch' }}
     needs: [ update, call-run-cy-test ]
     uses: ./.github/workflows/bump-version.yml
-    env:
-      BRANCH: ${{ needs.update.outputs.branch }}
     with:
-      ref: ${{ env.BRANCH }}
+      ref: ${{ needs.update.outputs.branch }}
       type: ${{ github.event.client_payload.type }}
 
   merge-release:
     name: Merge & Release
-    needs: [ update, call-run-cy-test]
-    if: ${{ github.event.client_payload.type == 'minor' || github.event.client_payload.type == 'patch' }}
+    needs: [ update, call-bump-version ]
     runs-on: ubuntu-latest
     env:
       BRANCH: ${{ needs.update.outputs.branch }}
@@ -61,10 +58,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: master
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 5
 
       - name: Rebase & Merge
         run: | 
+          git pull origin master &&
+          git checkout master &&
           git checkout ${{ env.BRANCH }} &&
           git rebase master &&
           git checkout master &&
@@ -74,7 +74,7 @@ jobs:
       - name: Create release on GitHub
         uses: ncipollo/release-action@v1
         with:
-          tag: v${{ steps.increment_version.outputs.new_version }}
+          tag: v${{ needs.call-bump-version.outputs.new_version }}
           body: ${{ env.SERVICE }} updated to ${{ env.VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       
