@@ -35,12 +35,23 @@ jobs:
   call-run-cy-test:
     name: Test
     needs: update
-    uses: ./.github/workflows/run-cy-test.yml
+    uses: ./.github/workflows/cy-tests.yml
     with:
-      branch: ${{ needs.update.outputs.branch }}
+      ref: ${{ needs.update.outputs.branch }}
 
-  publish:
-    name: Publish Changes
+  call-bump-version:
+    name: Version
+    if: ${{ github.event.client_payload.type == 'minor' || github.event.client_payload.type == 'patch' }}
+    needs: [ update, call-run-cy-test ]
+    uses: ./.github/workflows/bump-version.yml
+    env:
+      BRANCH: ${{ needs.update.outputs.branch }}
+    with:
+      ref: ${{ env.BRANCH }}
+      type: ${{ github.event.client_payload.type }}
+
+  merge-release:
+    name: Merge & Release
     needs: [ update, call-run-cy-test]
     if: ${{ github.event.client_payload.type == 'minor' || github.event.client_payload.type == 'patch' }}
     runs-on: ubuntu-latest
@@ -50,52 +61,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ env.BRANCH }}
-          fetch-depth: 5
-
-      - name: Install semver package
-        run: npm i semver
-
-      - name: Increment the Runtime Version
-        uses: actions/github-script@v6
-        id: increment_version
-        with:
-          result-encoding: string
-          script: |
-            const semver = require('semver');
-            const type = process.env.TYPE;
-            const output = [];
-            const listeners = {
-              stdout: (data) => output.push(data.toString()),
-              stderr: (data) => console.log("stderr: %s", data)
-            };
-            await exec.exec("npm", ["pkg", "get", "version"], { listeners });
-            console.log("op", output);
-            let version = JSON.parse(output.join(""));
-            console.log("v", version);
-            version = semver.inc(version, type);
-            console.log("v", version);
-            await exec.exec("npm", ["pkg", "set", `version=${version}`]);
-            core.setOutput('new_version', version);
-
-      - name: Updates version.json
-        env:
-          NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
-        run: node versionUpdate.mjs version ${{ env.NEW_VERSION }}
-
-      - name: Commit Change to New Branch
-        id: commit_version
-        uses: EndBug/add-and-commit@v9
-        env:
-          NEW_VERSION: ${{ steps.increment_version.outputs.new_version }}
-        with:
-          message: Update version ${{ env.NEW_VERSION }}
-          tag: v${{ env.NEW_VERSION }}
-          default_author: github_actions
+          ref: master
 
       - name: Rebase & Merge
         run: | 
-          git checkout master &&
           git checkout ${{ env.BRANCH }} &&
           git rebase master &&
           git checkout master &&
@@ -119,7 +88,6 @@ jobs:
     needs: [ update, call-run-cy-test ]
     if: ${{ failure() || github.event.client_payload.type == 'major' }}
     runs-on: ubuntu-latest
-    
     steps: 
       - name: Get Run URL
         id: run_url
