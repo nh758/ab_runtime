@@ -111,6 +111,7 @@ jobs:
               head: BRANCH,
               body,
             });
+            console.log(pr);
             github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
