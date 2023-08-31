@@ -111,9 +111,10 @@ jobs:
               head: BRANCH,
               body,
             });
+            console.log(pr.data);
             github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
-              labels: [{name: 'minor'}],
+              issue_number: pr.data.number,
+              labels: ['minor'],
             });
