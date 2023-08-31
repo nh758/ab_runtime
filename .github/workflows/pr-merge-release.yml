@@ -11,23 +11,22 @@ jobs:
   call-run-cy-test:
     name: Test
     # Only run if the PR closed by merging and we have a label
-    if: github.event.pull_request.merged && ($MAJOR || $MINOR || $PATCH )
+    if: ${{ github.event.pull_request.merged && (contains(github.event.pull_request.labels.*.name, 'major') || contains(github.event.pull_request.labels.*.name, 'minor') || contains(github.event.pull_request.labels.*.name, 'patch'))}}
     uses: ./.github/workflows/cy-tests.yml
     with:
-      ref: ${{ gtihub.ref }}
+      ref: ${{ github.ref }}
   get-release-type:
-    name: Create Release
-    needs: call-bump-version
+    name: Get Release Type
     runs-on: ubuntu-latest
-    output: 
+    outputs: 
       type: ${{ steps.release-type.outputs.type }}
     steps:
       - name: Get Release Type
         id: release-type
         run: |
-          if [ $MAJOR ]; then echo "type=major" >> "$GITHUB_OUTPUT";
-          elif [ $MINOR ]; then echo "type=minor" >> "$GITHUB_OUTPUT";
-          elif [ $PATCH ]; then echo "type=minor" >> "$GITHUB_OUTPUT"; fi
+          if [ $MAJOR == 'true' ]; then echo "type=major" >> "$GITHUB_OUTPUT";
+          elif [ $MINOR == 'true' ]; then echo "type=minor" >> "$GITHUB_OUTPUT";
+          elif [ $PATCH == 'true' ]; then echo "type=patch" >> "$GITHUB_OUTPUT"; fi
   call-bump-version:
     name: Version
     # Only run if tests pass 
