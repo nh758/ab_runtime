@@ -2,7 +2,7 @@ name: E2E Tests
 on:
    workflow_call:
     inputs:
-      branch:
+      ref:
         required: true
         type: string
 
@@ -20,7 +20,7 @@ jobs:
         #    with:
         #       folder: ab
         #       port: 8080
-        #       runtime: ${{ inputs.branch }}
+        #       runtime: ${{ inputs.ref }}
 
          - name: Check out kitchen-sink tests
            uses: actions/checkout@v3
