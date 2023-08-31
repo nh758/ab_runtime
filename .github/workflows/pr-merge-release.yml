@@ -14,12 +14,12 @@ jobs:
     if: github.event.pull_request.merged && ($MAJOR || $MINOR || $PATCH )
     uses: ./.github/workflows/cy-tests.yml
     with:
-      ref: ${{ gtihub.ref }}
+      ref: ${{ github.ref }}
   get-release-type:
     name: Create Release
     needs: call-bump-version
     runs-on: ubuntu-latest
-    output: 
+    outputs: 
       type: ${{ steps.release-type.outputs.type }}
     steps:
       - name: Get Release Type
