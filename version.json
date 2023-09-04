@@ -1,4 +1,4 @@
- {
+{
    "meta_version": "0.1.0",
    "services": {
       "api_sails": "develop",
@@ -12,7 +12,7 @@
       "notification_email": "develop",
       "process_manager": "develop",
       "relay": "develop",
-      "tenant_manager": "develop",
+      "tenant_manager": "0.4.5",
       "user_manager": "develop"
    }
 }
